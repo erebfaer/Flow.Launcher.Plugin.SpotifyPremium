@@ -51,6 +51,7 @@ namespace Flow.Launcher.Plugin.SpotifyPremium
             _expensiveTerms.Add("artist", SearchArtist);
             _expensiveTerms.Add("album", SearchAlbum);
             _expensiveTerms.Add("track", SearchTrack);
+            _expensiveTerms.Add("saved", SearchSaved);
             _expensiveTerms.Add("playlist", SearchPlaylist);
             _expensiveTerms.Add("device", GetDevices);
             _expensiveTerms.Add("queue", QueueSearch);
@@ -394,6 +395,38 @@ namespace Flow.Launcher.Plugin.SpotifyPremium
                         _client.Enqueue(x.Uri);
                     else
                         _client.Play(x.Uri);
+                    return true;
+                }
+            }).ToArray();
+
+            await Task.WhenAll(results);
+            return results.Any() ? results.Select(x => x.Result).ToList() : NothingFoundResult;
+        }
+
+        private Task<List<Result>> SearchSaved(string param) => SearchSaved(param, false);
+        private async Task<List<Result>> SearchSaved(string param, bool shouldQueue = false)
+        {
+            if (!_client.ApiConnected) return AuthenticateResult;
+
+            if (string.IsNullOrWhiteSpace(param))
+            {
+                return SingleResult("sp saved {track name}", "Search for a single Track to play.");
+            }
+
+            // Retrieve data and return the first 20 results
+            var searchResults = await _client.GetSaved(param);
+            var results = searchResults.Select(async x => new Result()
+            {
+                Title = x.Track.Name,
+                SubTitle = (shouldQueue ? "Queue track by " : "") +
+                           "Artist: " + string.Join(", ", x.Track.Artists.Select(a => a.Name)),
+                IcoPath = await _client.GetArtworkAsync(x.Track),
+                Action = _ =>
+                {
+                    if (shouldQueue)
+                        _client.Enqueue(x.Track.Uri);
+                    else
+                        _client.Play(x.Track.Uri);
                     return true;
                 }
             }).ToArray();

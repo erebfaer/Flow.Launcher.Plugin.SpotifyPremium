@@ -342,6 +342,19 @@ namespace Flow.Launcher.Plugin.SpotifyPremium
             return searchResponse.Tracks.Items;
         }
 
+        public async Task<List<SavedTrack>> GetSaved(string s)
+        {
+            var savedTracksPage = await _spotifyClient.Library.GetTracks();
+            var savedTracks = await _spotifyClient.PaginateAll(savedTracksPage);
+            var returnedTracks = new List<SavedTrack>();
+
+            returnedTracks.AddRange(
+                savedTracks.Where(
+                    track => track.Track.Name.Contains(s, StringComparison.InvariantCultureIgnoreCase)));
+
+            return returnedTracks;
+        }
+
         public async Task<List<SimplePlaylist>> GetPlaylists(string s)
         {
 
